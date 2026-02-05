@@ -9,6 +9,7 @@ A WebGPU-based real-time visualization system for 4D Flow MRI data using particl
 - **Interactive controls** for time phase, velocity threshold, particle density, and flow speed
 - **Color-coded velocity visualization** using heat map (blue → cyan → green → yellow → red)
 - **High performance** rendering with up to 10,000 particles at 60 FPS
+- **Docker deployment** for easy containerized deployment
 
 ## Requirements
 
@@ -20,6 +21,8 @@ A WebGPU-based real-time visualization system for 4D Flow MRI data using particl
 
 ## Usage
 
+### Option 1: Direct Browser Access
+
 1. Open `index.html` in a WebGPU-enabled browser
 2. Use the control panel to adjust visualization parameters:
    - **Time Phase**: Navigate through cardiac cycle (0-20 phases)
@@ -28,6 +31,36 @@ A WebGPU-based real-time visualization system for 4D Flow MRI data using particl
    - **Flow Speed**: Control animation speed
 3. Click **Play** to automatically cycle through time phases
 4. Click **Reset** to regenerate particle positions
+
+### Option 2: Docker Deployment (Recommended)
+
+#### Quick Start
+
+```bash
+# Make deployment script executable
+chmod +x docker-deploy.sh
+
+# Run automated deployment
+./docker-deploy.sh
+```
+
+#### Manual Docker Deployment
+
+```bash
+# Build and run with docker-compose
+docker-compose up -d
+
+# Or build and run with docker
+docker build -t flonics-4dflow-viz .
+docker run -d -p 8080:80 --name flonics-4dflow-visualization flonics-4dflow-viz
+```
+
+#### Access the Application
+
+- **Local:** http://localhost:8080
+- **Network:** http://<your-ip>:8080
+
+For detailed Docker instructions, see [DOCKER.md](./DOCKER.md)
 
 ## Technical Details
 
@@ -56,9 +89,15 @@ The visualization simulates a simplified cardiac flow pattern with:
 
 ```
 analytics/4dflow-visualization/
-├── index.html              # Main HTML interface
-├── flowVisualization.js    # WebGPU visualization engine
-└── README.md              # This file
+├── index.html                 # Main HTML interface
+├── flowVisualization.js       # WebGPU visualization engine
+├── README.md                  # This file
+├── Dockerfile                 # Docker container configuration
+├── docker-compose.yml         # Docker Compose orchestration
+├── docker-deploy.sh           # Automated deployment script
+├── nginx.conf                 # Nginx web server configuration
+├── .dockerignore              # Docker build context exclusions
+└── DOCKER.md                  # Comprehensive Docker documentation
 ```
 
 ## Customization
@@ -84,6 +123,14 @@ let g = clamp(sin(normalizedSpeed * 3.14159), 0.0, 1.0);
 let b = clamp(1.0 - normalizedSpeed, 0.0, 1.0);
 ```
 
+## Docker Features
+
+- **Lightweight:** Based on nginx:alpine image
+- **Optimized:** Gzip compression and static asset caching
+- **Secure:** WebGPU security headers configured
+- **Monitored:** Built-in health checks
+- **Portable:** Easy deployment across environments
+
 ## Future Enhancements
 
 - [ ] Import real 4D Flow MRI DICOM data
@@ -99,6 +146,7 @@ let b = clamp(1.0 - normalizedSpeed, 0.0, 1.0);
 - [WebGPU Specification](https://www.w3.org/TR/webgpu/)
 - [4D Flow MRI Clinical Applications](https://doi.org/10.1007/s00330-015-4119-z)
 - [Particle-based Flow Visualization](https://doi.org/10.1109/TVCG.2012.104)
+- [Docker Documentation](https://docs.docker.com/)
 
 ## License
 
