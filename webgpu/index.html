@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Flow MRI WebGPU Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #0f3460;
+        }
+
+        h1 {
+            font-size: 2em;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+        }
+
+        canvas {
+            border: 2px solid #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .controls {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #0f3460;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #0f3460 0%, #00d4ff 100%);
+            border: none;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .status {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .value-display {
+            color: #fff;
+            font-size: 14px;
+            text-align: right;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5em;
+            color: #00d4ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🩺 4D Flow MRI Velocity Visualizer</h1>
+            <p>WebGPU-Powered Real-Time Blood Flow Analysis</p>
+        </header>
+
+        <div class="main-content">
+            <div class="canvas-container">
+                <canvas id="gpuCanvas" width="1200" height="800"></canvas>
+                <div id="loading" class="loading" style="display: none;">Initializing WebGPU...</div>
+            </div>
+
+            <div class="controls">
+                <h2 style="margin-bottom: 20px; color: #00d4ff;">⚙️ Controls</h2>
+
+                <div class="control-group">
+                    <label for="fileInput">📁 Load MRI Data</label>
+                    <button onclick="document.getElementById('fileInput').click()">Choose File</button>
+                    <input type="file" id="fileInput" accept=".json">
+                </div>
+
+                <div class="control-group">
+                    <label for="scaleSlider">Vector Scale</label>
+                    <input type="range" id="scaleSlider" min="0.1" max="5.0" step="0.1" value="1.0">
+                    <div class="value-display" id="scaleValue">1.0</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="rotationSpeed">Rotation Speed</label>
+                    <input type="range" id="rotationSpeed" min="0" max="2" step="0.1" value="0.5">
+                    <div class="value-display" id="rotationValue">0.5</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="fovSlider">Field of View</label>
+                    <input type="range" id="fovSlider" min="30" max="120" step="5" value="60">
+                    <div class="value-display" id="fovValue">60°</div>
+                </div>
+
+                <div class="control-group">
+                    <button onclick="generateSampleData()">🔄 Generate Sample Data</button>
+                    <button onclick="resetView()">🎯 Reset View</button>
+                    <button onclick="toggleAnimation()">⏯️ Toggle Animation</button>
+                </div>
+
+                <div class="status">
+                    <div><strong>Status:</strong> <span id="status">Ready</span></div>
+                    <div><strong>Vectors:</strong> <span id="vectorCount">0</span></div>
+                    <div><strong>FPS:</strong> <span id="fps">0</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { FlowVisualizer, createIdentityMatrix, createPerspectiveMatrix } from './flow_visualizer.js';
+
+        let visualizer;
+        let animationId;
+        let isAnimating = true;
+        let rotation = 0;
+        let rotationSpeed = 0.5;
+        let scale = 1.0;
+        let fov = 60;
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        const canvas = document.getElementById('gpuCanvas');
+        const loading = document.getElementById('loading');
+
+        async function init() {
+            try {
+                loading.style.display = 'block';
+                document.getElementById('status').textContent = 'Initializing...';
+
+                visualizer = new FlowVisualizer(canvas);
+                await visualizer.initialize();
+
+                loading.style.display = 'none';
+                document.getElementById('status').textContent = 'Ready';
+
+                setupEventListeners();
+                generateSampleData();
+                animate();
+            } catch (error) {
+                loading.textContent = 'Error: ' + error.message;
+                document.getElementById('status').textContent = 'Error';
+                console.error(error);
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('scaleSlider').addEventListener('input', (e) => {
+                scale = parseFloat(e.target.value);
+                document.getElementById('scaleValue').textContent = scale.toFixed(1);
+            });
+
+            document.getElementById('rotationSpeed').addEventListener('input', (e) => {
+                rotationSpeed = parseFloat(e.target.value);
+                document.getElementById('rotationValue').textContent = rotationSpeed.toFixed(1);
+            });
+
+            document.getElementById('fovSlider').addEventListener('input', (e) => {
+                fov = parseFloat(e.target.value);
+                document.getElementById('fovValue').textContent = fov + '°';
+            });
+
+            document.getElementById('fileInput').addEventListener('change', loadFile);
+        }
+
+        function loadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    visualizer.loadVelocityData(data);
+                    document.getElementById('vectorCount').textContent = data.length;
+                    document.getElementById('status').textContent = 'Data loaded';
+                } catch (error) {
+                    alert('Error loading file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        window.generateSampleData = function() {
+            const sampleData = [];
+            const gridSize = 10;
+
+            for (let x = -gridSize; x <= gridSize; x += 2) {
+                for (let y = -gridSize; y <= gridSize; y += 2) {
+                    for (let z = -gridSize; z <= gridSize; z += 2) {
+                        const r = Math.sqrt(x*x + y*y + z*z);
+                        const theta = Math.atan2(y, x);
+                        
+                        // Circular flow pattern
+                        const vx = -Math.sin(theta) * (20 - r) * 0.5;
+                        const vy = Math.cos(theta) * (20 - r) * 0.5;
+                        const vz = Math.sin(r * 0.1) * 10;
+
+                        sampleData.push({
+                            position: [x, y, z],
+                            velocity: [vx, vy, vz]
+                        });
+                    }
+                }
+            }
+
+            visualizer.loadVelocityData(sampleData);
+            document.getElementById('vectorCount').textContent = sampleData.length;
+            document.getElementById('status').textContent = 'Sample data generated';
+        };
+
+        window.resetView = function() {
+            rotation = 0;
+            scale = 1.0;
+            fov = 60;
+            document.getElementById('scaleSlider').value = scale;
+            document.getElementById('scaleValue').textContent = scale.toFixed(1);
+            document.getElementById('fovSlider').value = fov;
+            document.getElementById('fovValue').textContent = fov + '°';
+        };
+
+        window.toggleAnimation = function() {
+            isAnimating = !isAnimating;
+            document.getElementById('status').textContent = isAnimating ? 'Animating' : 'Paused';
+        };
+
+        function createViewMatrix(angle) {
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            const distance = 50;
+
+            return new Float32Array([
+                cos, 0, sin, 0,
+                0, 1, 0, 0,
+                -sin, 0, cos, 0,
+                0, 0, -distance, 1
+            ]);
+        }
+
+        function animate() {
+            const currentTime = performance.now();
+            const deltaTime = (currentTime - lastTime) / 1000;
+
+            if (isAnimating) {
+                rotation += rotationSpeed * deltaTime;
+            }
+
+            const viewMatrix = createViewMatrix(rotation);
+            const aspect = canvas.width / canvas.height;
+            const projectionMatrix = createPerspectiveMatrix(
+                fov * Math.PI / 180,
+                aspect,
+                0.1,
+                1000
+            );
+
+            visualizer.updateUniforms(viewMatrix, projectionMatrix, currentTime / 1000, scale);
+            visualizer.render();
+
+            // Calculate FPS
+            frameCount++;
+            if (currentTime - lastTime >= 1000) {
+                fps = frameCount;
+                document.getElementById('fps').textContent = fps;
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+
+            animationId = requestAnimationFrame(animate);
+        }
+
+        init();
+    </script>
+</body>
+</html>
