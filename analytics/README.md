@@ -1,24 +1,45 @@
 # 4D Flow MRI Analytics Module
 
 ## Overview
-WebGPU 기반 4D Flow MRI 데이터 분석 모듈
+This module provides comprehensive analysis and visualization tools for 4D Flow MRI data using WebGPU acceleration.
 
-## Features
-- Flow velocity analysis
-- Wall shear stress calculation
-- Hemodynamic metrics computation
-- GPU-accelerated processing
-
-## Usage
-```typescript
-import { FlowAnalyzer, VelocityCalculator } from './analytics';
-
-const analyzer = new FlowAnalyzer(device);
-const result = await analyzer.analyze(flowData);
-```
+## Updated Features
+- **Enhanced Flow Analysis**: Improved velocity and direction calculations
+- **Optimized WebGPU Rendering**: Better performance for real-time visualization
+- **Advanced Data Processing**: Noise reduction and temporal filtering
+- **Hemodynamic Metrics**: WSS, vorticity, and flow rate calculations
 
 ## Modules
-- `flow-analyzer.ts`: 주요 흐름 분석
-- `velocity-calculator.ts`: 속도 계산 (WebGPU)
-- `wall-shear-stress.ts`: WSS 계산
-- `flow-metrics.ts`: 혈류역학 지표
+
+### flow-analysis.ts
+Core flow analysis with peak velocity detection and point-specific metrics.
+
+### visualization.ts
+WebGPU-based rendering pipeline for flow vector visualization.
+
+### data-processor.ts
+Data preprocessing with smoothing, noise reduction, and temporal filtering.
+
+### metrics.ts
+Comprehensive hemodynamic metrics calculation including WSS and vorticity.
+
+## Usage Example
+```typescript
+import { FlowAnalyzer } from './flow-analysis';
+import { FlowVisualizer } from './visualization';
+import { MetricsCalculator } from './metrics';
+
+const analyzer = new FlowAnalyzer(flowData);
+const peakVel = analyzer.calculatePeakVelocity();
+const metrics = MetricsCalculator.calculateMetrics(flowData);
+```
+
+## Requirements
+- WebGPU-compatible browser
+- 4D Flow MRI data in Float32Array format
+
+## Recent Updates
+- Improved calculation accuracy
+- Enhanced performance optimization
+- Better error handling
+- Extended metrics support
