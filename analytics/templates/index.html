@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Flow MRI 분석</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>4D Flow MRI 분석 도구</h1>
+        
+        <div class="input-section">
+            <h2>속도 데이터 입력</h2>
+            <textarea id="velocityInput" placeholder="속도 데이터를 쉼표로 구분하여 입력하세요 (예: 1.2, 2.3, 3.4, 4.5)"></textarea>
+            <button onclick="analyzeData()">분석 시작</button>
+        </div>
+        
+        <div class="result-section" id="resultSection" style="display:none;">
+            <h2>분석 결과</h2>
+            <div class="result-grid">
+                <div class="result-item">
+                    <span class="label">평균 속도:</span>
+                    <span class="value" id="meanVelocity">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">최대 속도:</span>
+                    <span class="value" id="maxVelocity">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">최소 속도:</span>
+                    <span class="value" id="minVelocity">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">표준 편차:</span>
+                    <span class="value" id="stdVelocity">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
