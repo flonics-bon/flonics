@@ -9,30 +9,43 @@ def index():
     return render_template('index.html')
 
 @app.route('/api/analyze', methods=['POST'])
-def analyze_flow():
+def analyze():
     try:
-        data = request.json
+        data = request.get_json()
         velocity_data = np.array(data.get('velocity', []))
         
-        # 기본 4D Flow 분석
-        mean_velocity = np.mean(velocity_data) if len(velocity_data) > 0 else 0
-        max_velocity = np.max(velocity_data) if len(velocity_data) > 0 else 0
-        flow_rate = mean_velocity * data.get('area', 1.0)
-        
-        result = {
-            'mean_velocity': float(mean_velocity),
-            'max_velocity': float(max_velocity),
-            'flow_rate': float(flow_rate),
-            'status': 'success'
+        # 기본 4D Flow MRI 분석
+        results = {
+            'mean_velocity': float(np.mean(velocity_data)) if len(velocity_data) > 0 else 0,
+            'max_velocity': float(np.max(velocity_data)) if len(velocity_data) > 0 else 0,
+            'min_velocity': float(np.min(velocity_data)) if len(velocity_data) > 0 else 0,
+            'std_velocity': float(np.std(velocity_data)) if len(velocity_data) > 0 else 0
         }
         
-        return jsonify(result)
+        return jsonify(results)
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 400
+        return jsonify({'error': str(e)}), 400
 
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    return jsonify({'status': 'healthy', 'service': '4D Flow MRI Analytics'})
+@app.route('/api/flow-metrics', methods=['POST'])
+def flow_metrics():
+    try:
+        data = request.get_json()
+        vx = np.array(data.get('vx', []))
+        vy = np.array(data.get('vy', []))
+        vz = np.array(data.get('vz', []))
+        
+        # 속도 크기 계산
+        velocity_magnitude = np.sqrt(vx**2 + vy**2 + vz**2)
+        
+        results = {
+            'velocity_magnitude': velocity_magnitude.tolist(),
+            'mean_flow': float(np.mean(velocity_magnitude)),
+            'peak_flow': float(np.max(velocity_magnitude))
+        }
+        
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
