@@ -9,22 +9,30 @@ def index():
     return render_template('index.html')
 
 @app.route('/api/analyze', methods=['POST'])
-def analyze():
+def analyze_flow():
     try:
         data = request.json
         velocity_data = np.array(data.get('velocity', []))
         
-        # 기본 4D Flow MRI 분석
+        # 기본 4D Flow 분석
+        mean_velocity = np.mean(velocity_data) if len(velocity_data) > 0 else 0
+        max_velocity = np.max(velocity_data) if len(velocity_data) > 0 else 0
+        flow_rate = mean_velocity * data.get('area', 1.0)
+        
         result = {
-            'mean_velocity': float(np.mean(velocity_data)) if len(velocity_data) > 0 else 0,
-            'max_velocity': float(np.max(velocity_data)) if len(velocity_data) > 0 else 0,
-            'min_velocity': float(np.min(velocity_data)) if len(velocity_data) > 0 else 0,
-            'std_velocity': float(np.std(velocity_data)) if len(velocity_data) > 0 else 0
+            'mean_velocity': float(mean_velocity),
+            'max_velocity': float(max_velocity),
+            'flow_rate': float(flow_rate),
+            'status': 'success'
         }
         
         return jsonify(result)
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'healthy', 'service': '4D Flow MRI Analytics'})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

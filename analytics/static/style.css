@@ -16,60 +16,83 @@ body {
     margin: 0 auto;
     background: white;
     border-radius: 15px;
-    padding: 30px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
 }
 
-h1 {
-    color: #333;
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
     text-align: center;
-    margin-bottom: 30px;
+}
+
+header h1 {
     font-size: 2em;
+    margin-bottom: 10px;
+}
+
+header p {
+    opacity: 0.9;
+    font-size: 1.1em;
+}
+
+main {
+    padding: 30px;
+}
+
+.input-section, .result-section {
+    margin-bottom: 30px;
 }
 
 h2 {
-    color: #555;
-    margin-bottom: 15px;
-    font-size: 1.3em;
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 1.5em;
 }
 
-.input-section {
-    margin-bottom: 30px;
+.form-group {
+    margin-bottom: 20px;
 }
 
-#velocityInput {
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+}
+
+input[type="text"],
+input[type="number"] {
     width: 100%;
-    height: 120px;
-    padding: 15px;
-    border: 2px solid #ddd;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
     border-radius: 8px;
-    font-size: 14px;
-    resize: vertical;
-    margin-bottom: 15px;
-    font-family: monospace;
+    font-size: 1em;
+    transition: border-color 0.3s;
 }
 
-#velocityInput:focus {
+input[type="text"]:focus,
+input[type="number"]:focus {
     outline: none;
     border-color: #667eea;
 }
 
 button {
-    width: 100%;
-    padding: 15px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
+    padding: 15px 40px;
+    font-size: 1.1em;
     border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
+    width: 100%;
 }
 
 button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
 }
 
 button:active {
@@ -78,34 +101,38 @@ button:active {
 
 .result-section {
     background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    margin-top: 20px;
+    padding: 25px;
+    border-radius: 10px;
 }
 
 .result-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
 }
 
 .result-item {
     background: white;
-    padding: 15px;
+    padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .result-item .label {
-    display: block;
     color: #666;
-    font-size: 0.9em;
-    margin-bottom: 5px;
+    font-weight: 500;
 }
 
 .result-item .value {
-    display: block;
     color: #667eea;
     font-size: 1.5em;
     font-weight: bold;
+    margin: 0 10px;
+}
+
+.result-item .unit {
+    color: #999;
+    font-size: 0.9em;
 }
