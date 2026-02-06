@@ -1,2 +1,2 @@
-# Temporary files directory
-# This folder is used for storing temporary analysis files
+# This file ensures the temp directory is tracked by git
+# The temp folder is used for temporary file storage during 4D Flow MRI analysis
