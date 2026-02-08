@@ -1,5 +1,12 @@
 export { FlowAnalyzer } from './flow-analyzer';
+export { FlowAnalysis } from './flow-analysis';
+export { FlowMetrics } from './flow-metrics';
 export { VelocityCalculator } from './velocity-calculator';
 export { WallShearStress } from './wall-shear-stress';
-export { FlowMetrics } from './flow-metrics';
-export type { AnalyticsConfig, FlowData, MetricsResult } from './types';
+export { Visualization } from './visualization';
+export { MetricsCalculator } from './metrics';
+export { DataProcessor } from './data-processor';
+export { TurbulenceAnalyzer } from './turbulence-analyzer';
+export { PressureGradientCalculator } from './pressure-gradient';
+export { VorticityCalculator } from './vorticity-calculator';
+export * from './types';
