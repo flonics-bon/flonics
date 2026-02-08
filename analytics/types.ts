@@ -1,18 +1,20 @@
-export interface AnalyticsConfig {
-  timeSteps: number;
-  spatialResolution: [number, number, number];
-  venc: number;
-}
-
 export interface FlowData {
-  velocity: Float32Array;
-  dimensions: [number, number, number];
-  timePoint: number;
+velocity: number;
+pressure: number;
+diameter: number;
+viscosity: number;
 }
-
-export interface MetricsResult {
-  peakVelocity: number;
-  meanVelocity: number;
-  flowRate: number;
-  wss: number;
+export interface WSSResult {
+value: number;
+unit: string;
+location: string;
+}
+export interface VelocityProfile {
+radius: number;
+velocity: number;
+}
+export interface FlowMetrics {
+reynoldsNumber: number;
+flowRate: number;
+wss: number;
 }

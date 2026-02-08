@@ -1,40 +1,21 @@
-export class VelocityCalculator {
-  private device: GPUDevice;
-  private pipeline: GPUComputePipeline | null = null;
-
-  constructor(device: GPUDevice) {
-    this.device = device;
-  }
-
-  async initialize(): Promise<void> {
-    const shaderCode = `
-      @group(0) @binding(0) var<storage, read> input: array<f32>;
-      @group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-      @compute @workgroup_size(64)
-      fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-        let idx = global_id.x;
-        output[idx] = sqrt(input[idx * 3] * input[idx * 3] + 
-                           input[idx * 3 + 1] * input[idx * 3 + 1] + 
-                           input[idx * 3 + 2] * input[idx * 3 + 2]);
-      }
-    `;
-
-    const shaderModule = this.device.createShaderModule({ code: shaderCode });
-    this.pipeline = this.device.createComputePipeline({
-      layout: 'auto',
-      compute: { module: shaderModule, entryPoint: 'main' }
-    });
-  }
-
-  calculate(velocityComponents: Float32Array): Float32Array {
-    const magnitude = new Float32Array(velocityComponents.length / 3);
-    for (let i = 0; i < magnitude.length; i++) {
-      const vx = velocityComponents[i * 3];
-      const vy = velocityComponents[i * 3 + 1];
-      const vz = velocityComponents[i * 3 + 2];
-      magnitude[i] = Math.sqrt(vx * vx + vy * vy + vz * vz);
-    }
-    return magnitude;
-  }
+import { FlowData, VelocityProfile } from './types';
+export function calculateVelocity(flowRate: number, diameter: number): number {
+const radius = diameter / 2;
+const area = Math.PI * radius * radius;
+return flowRate / area;
+}
+export function calculateVelocityProfile(data: FlowData, points: number = 10): VelocityProfile[] {
+const { velocity, diameter } = data;
+const radius = diameter / 2;
+const maxVelocity = 2 * velocity;
+const profile: VelocityProfile[] = [];
+for (let i = 0; i <= points; i++) {
+const r = (i / points) * radius;
+const v = maxVelocity * (1 - Math.pow(r / radius, 2));
+profile.push({ radius: r, velocity: v });
+}
+return profile;
+}
+export function getPeakVelocity(data: FlowData): number {
+return 2 * data.velocity;
 }
