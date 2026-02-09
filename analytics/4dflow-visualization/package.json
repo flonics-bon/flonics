@@ -1,0 +1,16 @@
+{
+"name":"4dflow-visualization",
+"version":"1.0.0",
+"description":"WebGPU-based 4D Flow Visualization",
+"main":"flowVisualization.js",
+"scripts":{
+"start":"python -m http.server 8080",
+"docker:build":"docker-compose build",
+"docker:up":"docker-compose up -d",
+"docker:down":"docker-compose down"
+},
+"keywords":["webgpu","visualization","4dflow","medical-imaging"],
+"engines":{
+"node":">=18.0.0"
+}
+}
