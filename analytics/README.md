@@ -1,149 +1,51 @@
 # Analytics Module
 
 ## Overview
-Comprehensive 4D flow analysis and visualization toolkit for cardiovascular hemodynamics.
+4D Flow MRI 데이터 분석 및 시각화를 위한 모듈
 
-## Architecture
-
-### Core Components
-- **Flow Analysis**: `flow-analyzer.ts`, `flow-analysis.ts`
-- **Metrics Calculation**: `metrics.ts`, `flow-metrics.ts`, `velocity-calculator.ts`
-- **Wall Shear Stress**: `wall-shear-stress.ts`
-- **Visualization**: `visualization.ts`, `webgpu-renderer.js`, `flowVisualization.js`
-- **Data Management**: `flow-data-manager.js`, `data-processor.ts`
-
-### Backend
-- **Flask Server**: `app.py` - REST API for data processing
-
-## Installation
-
-```bash
-npm install
-pip install -r requirements.txt
+## Structure
 ```
+analytics/
+├── app.py                    # Flask 서버
+├── index.ts                  # TypeScript 진입점
+├── types.ts                  # 공통 타입 정의
+├── metrics.ts                # 메트릭 계산
+├── flow-analysis.ts          # 흐름 분석
+├── flow-analyzer.ts          # 분석기
+├── flow-metrics.ts           # 흐름 메트릭
+├── velocity-calculator.ts    # 속도 계산
+├── visualization.ts          # 시각화
+├── wall-shear-stress.ts      # WSS 계산
+├── data-processor.ts         # 데이터 처리
+├── js/
+│   ├── main.js              # 메인 스크립트
+│   ├── flow-data-manager.js # 데이터 관리
+│   └── webgpu-renderer.js   # WebGPU 렌더링
+├── static/
+│   └── script.js            # 정적 스크립트
+└── 4dflow-visualization/
+    └── flowVisualization.js # 4D Flow 시각화
+```
+
+## Features
+- 4D Flow MRI 데이터 처리
+- 속도장 분석 및 메트릭 계산
+- Wall Shear Stress 계산
+- WebGPU 기반 실시간 렌더링
+- 대화형 시각화
 
 ## Usage
-
-### TypeScript API
-
-```typescript
-import { FlowAnalyzer } from './flow-analyzer';
-import { calculateMetrics } from './metrics';
-import { visualizeFlow } from './visualization';
-
-const analyzer = new FlowAnalyzer(flowData);
-const metrics = calculateMetrics(analyzer.getResults());
-visualizeFlow(metrics, canvas);
-```
-
-### Python Backend
-
+### Python Server
 ```bash
 python app.py
 ```
 
-Endpoints:
-- `POST /analyze` - Process flow data
-- `GET /metrics` - Retrieve calculated metrics
-
-### WebGPU Rendering
-
-```javascript
-import { WebGPURenderer } from './js/webgpu-renderer.js';
-
-const renderer = new WebGPURenderer(canvas);
-renderer.render(flowData);
+### TypeScript Build
+```bash
+tsc
 ```
-
-## API Reference
-
-### FlowAnalyzer
-```typescript
-class FlowAnalyzer {
-  constructor(data: FlowData);
-  analyze(): AnalysisResult;
-  getVelocityField(): VelocityField;
-  calculateWSS(): WSSResult;
-}
-```
-
-### Metrics
-```typescript
-interface FlowMetrics {
-  peakVelocity: number;
-  meanVelocity: number;
-  flowRate: number;
-  vorticity: number[];
-  wss: number[];
-}
-
-function calculateMetrics(data: FlowData): FlowMetrics;
-```
-
-### Visualization
-```typescript
-function visualizeFlow(
-  metrics: FlowMetrics,
-  canvas: HTMLCanvasElement,
-  options?: VisualizationOptions
-): void;
-```
-
-## File Structure
-
-```
-analytics/
-├── app.py                          # Flask backend
-├── index.ts                        # Main entry point
-├── types.ts                        # TypeScript type definitions
-├── flow-analyzer.ts                # Core flow analysis
-├── flow-analysis.ts                # Analysis utilities
-├── flow-metrics.ts                 # Metrics calculation
-├── metrics.ts                      # Metrics aggregation
-├── velocity-calculator.ts          # Velocity field processing
-├── wall-shear-stress.ts            # WSS computation
-├── visualization.ts                # Visualization logic
-├── data-processor.ts               # Data preprocessing
-├── js/
-│   ├── main.js                     # JavaScript entry
-│   ├── flow-data-manager.js        # Data management
-│   └── webgpu-renderer.js          # GPU-accelerated rendering
-├── static/
-│   └── script.js                   # Frontend scripts
-└── 4dflow-visualization/
-    └── flowVisualization.js        # 4D flow specific viz
-```
-
-## Features
-
-- **Real-time Flow Analysis**: High-performance velocity field processing
-- **Advanced Metrics**: Peak velocity, flow rate, vorticity, WSS
-- **WebGPU Rendering**: Hardware-accelerated 3D/4D visualization
-- **Python Integration**: Backend processing with NumPy/SciPy
-- **Type Safety**: Full TypeScript support
-
-## Performance
-
-- WebGPU rendering: 60+ FPS for complex flow fields
-- Parallel processing: Multi-threaded analysis
-- Memory efficient: Streaming data processing
 
 ## Dependencies
-
-### TypeScript/JavaScript
-- WebGPU API
-- Three.js (optional)
-
-### Python
-- Flask
-- NumPy
-- SciPy
-- VTK (optional)
-
-## Contributing
-
-Follow TypeScript/Python best practices. Run tests before PR.
-
-## License
-
-MIT
+- Python: Flask, NumPy, SciPy
+- TypeScript: Three.js, WebGPU API
+- JavaScript: ES6+
