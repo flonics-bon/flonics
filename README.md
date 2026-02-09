@@ -1,16 +1,27 @@
-# Flonics - 4D Flow MRI Visualization
+# Project Repository
 
-WebGPU 기반의 고성능 4D Flow MRI 데이터 시각화 도구입니다.
+This is the initial setup for the project repository.
 
-## 주요 기능
-- 실시간 혈류 벡터 렌더링
-- WebGPU 기반 GPU 가속
-- 4D 시공간 데이터 처리
+## Getting Started
 
-## 기술 스택
-- WebGPU
-- 4D Flow MRI
-- Real-time Visualization
+Follow the instructions below to set up and run the project.
 
----
-*AI-enhanced development on branch: ai-generated-bonwook*
+## Installation
+
+```bash
+npm install
+```
+
+## Usage
+
+```bash
+npm start
+```
+
+## Contributing
+
+Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License.
