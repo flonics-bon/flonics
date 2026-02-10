@@ -1,40 +1,9 @@
-export class VelocityCalculator {
-  private device: GPUDevice;
-  private pipeline: GPUComputePipeline | null = null;
-
-  constructor(device: GPUDevice) {
-    this.device = device;
-  }
-
-  async initialize(): Promise<void> {
-    const shaderCode = `
-      @group(0) @binding(0) var<storage, read> input: array<f32>;
-      @group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-      @compute @workgroup_size(64)
-      fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-        let idx = global_id.x;
-        output[idx] = sqrt(input[idx * 3] * input[idx * 3] + 
-                           input[idx * 3 + 1] * input[idx * 3 + 1] + 
-                           input[idx * 3 + 2] * input[idx * 3 + 2]);
-      }
-    `;
-
-    const shaderModule = this.device.createShaderModule({ code: shaderCode });
-    this.pipeline = this.device.createComputePipeline({
-      layout: 'auto',
-      compute: { module: shaderModule, entryPoint: 'main' }
-    });
-  }
-
-  calculate(velocityComponents: Float32Array): Float32Array {
-    const magnitude = new Float32Array(velocityComponents.length / 3);
-    for (let i = 0; i < magnitude.length; i++) {
-      const vx = velocityComponents[i * 3];
-      const vy = velocityComponents[i * 3 + 1];
-      const vz = velocityComponents[i * 3 + 2];
-      magnitude[i] = Math.sqrt(vx * vx + vy * vy + vz * vz);
-    }
-    return magnitude;
-  }
-}
+import{DataProcessor}from'./data-processor';
+interface VelocityVector{vx:number;vy:number;vz:number}
+interface VelocityField{vectors:VelocityVector[];grid:{nx:number;ny:number;nz:number}}
+class VelocityCalculator{private processor:DataProcessor;constructor(){this.processor=new DataProcessor({minValue:-1e7,maxValue:1e7,defaultValue:0})}
+computeMagnitude(v:VelocityVector):number{if(!v){return 0}const vx=this.processor.validateNumber(v.vx);const vy=this.processor.validateNumber(v.vy);const vz=this.processor.validateNumber(v.vz);const mag=Math.sqrt(vx*vx+vy*vy+vz*vz);return this.processor.validateNumber(mag)}
+computeDirection(v:VelocityVector):{theta:number;phi:number}|null{if(!v){return null}const vx=this.processor.validateNumber(v.vx);const vy=this.processor.validateNumber(v.vy);const vz=this.processor.validateNumber(v.vz);const mag=this.computeMagnitude(v);if(mag===0){return{theta:0,phi:0}}const theta=Math.acos(this.processor.safeDivide(vz,mag));const phi=Math.atan2(vy,vx);return{theta:this.processor.validateNumber(theta),phi:this.processor.validateNumber(phi)}}
+interpolateVelocity(field:VelocityField,x:number,y:number,z:number):VelocityVector|null{if(!field||!field.vectors||!field.grid){return null}const{nx,ny,nz}=field.grid;if(nx<=0||ny<=0||nz<=0){return null}const safeX=Math.max(0,Math.min(x,nx-1));const safeY=Math.max(0,Math.min(y,ny-1));const safeZ=Math.max(0,Math.min(z,nz-1));const i0=Math.floor(safeX);const j0=Math.floor(safeY);const k0=Math.floor(safeZ);const i1=Math.min(i0+1,nx-1);const j1=Math.min(j0+1,ny-1);const k1=Math.min(k0+1,nz-1);const fx=safeX-i0;const fy=safeY-j0;const fz=safeZ-k0;const getVector=(i:number,j:number,k:number):VelocityVector=>{const idx=k*nx*ny+j*nx+i;return this.processor.safeArrayAccess(field.vectors,idx,{vx:0,vy:0,vz:0})};const v000=getVector(i0,j0,k0);const v100=getVector(i1,j0,k0);const v010=getVector(i0,j1,k0);const v110=getVector(i1,j1,k0);const v001=getVector(i0,j0,k1);const v101=getVector(i1,j0,k1);const v011=getVector(i0,j1,k1);const v111=getVector(i1,j1,k1);const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;const vx=lerp(lerp(lerp(v000.vx,v100.vx,fx),lerp(v010.vx,v110.vx,fx),fy),lerp(lerp(v001.vx,v101.vx,fx),lerp(v011.vx,v111.vx,fx),fy),fz);const vy=lerp(lerp(lerp(v000.vy,v100.vy,fx),lerp(v010.vy,v110.vy,fx),fy),lerp(lerp(v001.vy,v101.vy,fx),lerp(v011.vy,v111.vy,fx),fy),fz);const vz=lerp(lerp(lerp(v000.vz,v100.vz,fx),lerp(v010.vz,v110.vz,fx),fy),lerp(lerp(v001.vz,v101.vz,fx),lerp(v011.vz,v111.vz,fx),fy),fz);return{vx:this.processor.validateNumber(vx),vy:this.processor.validateNumber(vy),vz:this.processor.validateNumber(vz)}}
+computeKineticEnergy(field:VelocityField,density:number=1.0):number{if(!field||!field.vectors||field.vectors.length===0){return 0}const safeDensity=this.processor.validateNumber(density);if(safeDensity<=0){return 0}let totalEnergy=0;for(const v of field.vectors){const mag=this.computeMagnitude(v);totalEnergy+=0.5*safeDensity*mag*mag}return this.processor.safeDivide(totalEnergy,field.vectors.length)}}
+export{VelocityCalculator,VelocityVector,VelocityField}
