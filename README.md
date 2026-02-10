@@ -1,16 +1,32 @@
-# Flonics - 4D Flow MRI Visualization
+# Medical Imaging Analytics Platform
 
-WebGPU 기반의 고성능 4D Flow MRI 데이터 시각화 도구입니다.
+## Overview
+Advanced 4D flow visualization and analysis system for medical imaging data.
 
-## 주요 기능
-- 실시간 혈류 벡터 렌더링
-- WebGPU 기반 GPU 가속
-- 4D 시공간 데이터 처리
+## Features
+- Real-time 4D flow visualization
+- Interactive data analysis
+- Docker-based deployment
+- Automated CI/CD pipeline
 
-## 기술 스택
-- WebGPU
-- 4D Flow MRI
-- Real-time Visualization
+## Quick Start
+```bash
+cd analytics/4dflow-visualization
+docker-compose up
+```
 
----
-*AI-enhanced development on branch: ai-generated-bonwook*
+## Modules
+- **analytics**: Core analysis engine with Flask backend
+- **4dflow-visualization**: Interactive visualization interface
+
+## Tech Stack
+- Python 3.x (Flask)
+- TypeScript
+- Docker
+- GitHub Actions
+
+## Documentation
+See [analytics/README.md](analytics/README.md) for detailed module documentation.
+
+## License
+MIT
