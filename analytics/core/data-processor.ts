@@ -1,40 +1,55 @@
-import { FlowData } from '../types/flow-types';
+import { FlowData, ProcessedFlowData, VelocityVector } from '../types/flow-types';
 
 export class DataProcessor {
-process(data: FlowData): Float32Array {
-const normalized = this.normalize(data.raw);
-const filtered = this.applyFilter(normalized);
-return filtered;
-}
+  processFlowData(rawData: FlowData): ProcessedFlowData {
+    const velocityMagnitudes = this.calculateVelocityMagnitudes(rawData.vectors);
+    const normalized = this.normalizeVectors(rawData.vectors);
+    
+    return {
+      vectors: normalized,
+      magnitudes: velocityMagnitudes,
+      dimensions: rawData.dimensions,
+      timestamp: rawData.timestamp,
+      metadata: rawData.metadata
+    };
+  }
 
-private normalize(data: Float32Array): Float32Array {
-const result = new Float32Array(data.length);
-let max = -Infinity, min = Infinity;
+  private calculateVelocityMagnitudes(vectors: VelocityVector[]): number[] {
+    return vectors.map(v => Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2));
+  }
 
-for (let i = 0; i < data.length; i++) {
-if (data[i] > max) max = data[i];
-if (data[i] < min) min = data[i];
-}
+  private normalizeVectors(vectors: VelocityVector[]): VelocityVector[] {
+    const magnitudes = this.calculateVelocityMagnitudes(vectors);
+    const maxMag = Math.max(...magnitudes);
+    
+    if (maxMag === 0) return vectors;
+    
+    return vectors.map(v => ({
+      x: v.x / maxMag,
+      y: v.y / maxMag,
+      z: v.z / maxMag
+    }));
+  }
 
-const range = max - min;
-for (let i = 0; i < data.length; i++) {
-result[i] = (data[i] - min) / range;
-}
+  filterByThreshold(data: ProcessedFlowData, threshold: number): ProcessedFlowData {
+    const filtered = data.vectors.filter((_, idx) => data.magnitudes[idx] >= threshold);
+    const filteredMags = data.magnitudes.filter(m => m >= threshold);
+    
+    return {
+      ...data,
+      vectors: filtered,
+      magnitudes: filteredMags
+    };
+  }
 
-return result;
-}
-
-private applyFilter(data: Float32Array): Float32Array {
-const result = new Float32Array(data.length);
-const kernel = [0.25, 0.5, 0.25];
-
-for (let i = 1; i < data.length - 1; i++) {
-result[i] = data[i - 1] * kernel[0] + data[i] * kernel[1] + data[i + 1] * kernel[2];
-}
-
-result[0] = data[0];
-result[data.length - 1] = data[data.length - 1];
-
-return result;
-}
+  downsample(data: ProcessedFlowData, factor: number): ProcessedFlowData {
+    const sampled = data.vectors.filter((_, idx) => idx % factor === 0);
+    const sampledMags = data.magnitudes.filter((_, idx) => idx % factor === 0);
+    
+    return {
+      ...data,
+      vectors: sampled,
+      magnitudes: sampledMags
+    };
+  }
 }

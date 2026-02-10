@@ -1,59 +1,57 @@
-import { VelocityField, WSSData, VorticityField } from '../types/flow-types';
+import { ProcessedFlowData, FlowMetrics } from '../types/flow-types';
 
 export class MetricsCalculator {
-calculateWSS(velocity: VelocityField): WSSData {
-const [nx, ny, nz] = velocity.dimensions;
-const wss = new Float32Array(nx * ny * nz);
-const mu = 0.004;
+  calculate(data: ProcessedFlowData): FlowMetrics {
+    return {
+      peakVelocity: this.getPeakVelocity(data.magnitudes),
+      meanVelocity: this.getMeanVelocity(data.magnitudes),
+      flowVolume: this.calculateFlowVolume(data.magnitudes),
+      velocityStd: this.calculateStandardDeviation(data.magnitudes),
+      reynoldsNumber: this.estimateReynoldsNumber(data.magnitudes),
+      wallShearStress: this.estimateWallShearStress(data.magnitudes)
+    };
+  }
 
-for (let k = 1; k < nz - 1; k++) {
-for (let j = 1; j < ny - 1; j++) {
-for (let i = 1; i < nx - 1; i++) {
-const idx = i + j * nx + k * nx * ny;
-const dvx_dy = (velocity.vx[idx + nx] - velocity.vx[idx - nx]) / 2;
-const dvy_dx = (velocity.vy[idx + 1] - velocity.vy[idx - 1]) / 2;
-const shear = Math.sqrt(dvx_dy ** 2 + dvy_dx ** 2);
-wss[idx] = mu * shear;
-}
-}
-}
+  private getPeakVelocity(magnitudes: number[]): number {
+    return Math.max(...magnitudes);
+  }
 
-return { values: wss, dimensions: velocity.dimensions };
-}
+  private getMeanVelocity(magnitudes: number[]): number {
+    return magnitudes.reduce((a, b) => a + b, 0) / magnitudes.length;
+  }
 
-calculateVorticity(velocity: VelocityField): VorticityField {
-const [nx, ny, nz] = velocity.dimensions;
-const wx = new Float32Array(nx * ny * nz);
-const wy = new Float32Array(nx * ny * nz);
-const wz = new Float32Array(nx * ny * nz);
+  private calculateFlowVolume(magnitudes: number[]): number {
+    return magnitudes.reduce((a, b) => a + b, 0);
+  }
 
-for (let k = 1; k < nz - 1; k++) {
-for (let j = 1; j < ny - 1; j++) {
-for (let i = 1; i < nx - 1; i++) {
-const idx = i + j * nx + k * nx * ny;
-const dvy_dz = (velocity.vy[idx + nx * ny] - velocity.vy[idx - nx * ny]) / 2;
-const dvz_dy = (velocity.vz[idx + nx] - velocity.vz[idx - nx]) / 2;
-const dvz_dx = (velocity.vz[idx + 1] - velocity.vz[idx - 1]) / 2;
-const dvx_dz = (velocity.vx[idx + nx * ny] - velocity.vx[idx - nx * ny]) / 2;
-const dvx_dy = (velocity.vx[idx + nx] - velocity.vx[idx - nx]) / 2;
-const dvy_dx = (velocity.vy[idx + 1] - velocity.vy[idx - 1]) / 2;
+  private calculateStandardDeviation(magnitudes: number[]): number {
+    const mean = this.getMeanVelocity(magnitudes);
+    const variance = magnitudes.reduce((sum, v) => sum + (v - mean) ** 2, 0) / magnitudes.length;
+    return Math.sqrt(variance);
+  }
 
-wx[idx] = dvy_dz - dvz_dy;
-wy[idx] = dvz_dx - dvx_dz;
-wz[idx] = dvx_dy - dvy_dx;
-}
-}
-}
+  private estimateReynoldsNumber(magnitudes: number[]): number {
+    const meanVel = this.getMeanVelocity(magnitudes);
+    const characteristicLength = 0.01;
+    const kinematicViscosity = 0.000004;
+    return (meanVel * characteristicLength) / kinematicViscosity;
+  }
 
-return { wx, wy, wz, dimensions: velocity.dimensions };
-}
+  private estimateWallShearStress(magnitudes: number[]): number {
+    const maxVel = this.getPeakVelocity(magnitudes);
+    const density = 1060;
+    const viscosity = 0.004;
+    return viscosity * maxVel * 0.1;
+  }
 
-calculateFlowRate(velocity: VelocityField): number {
-const [nx, ny, nz] = velocity.dimensions;
-let sum = 0;
-for (let i = 0; i < nx * ny * nz; i++) {
-sum += Math.sqrt(velocity.vx[i] ** 2 + velocity.vy[i] ** 2 + velocity.vz[i] ** 2);
-}
-return sum / (nx * ny * nz);
-}
+  calculateTemporalMetrics(timeSeriesData: ProcessedFlowData[]): any {
+    const peakVelocities = timeSeriesData.map(d => this.getPeakVelocity(d.magnitudes));
+    
+    return {
+      maxPeak: Math.max(...peakVelocities),
+      minPeak: Math.min(...peakVelocities),
+      avgPeak: peakVelocities.reduce((a, b) => a + b, 0) / peakVelocities.length,
+      peakVariation: this.calculateStandardDeviation(peakVelocities)
+    };
+  }
 }

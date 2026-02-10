@@ -1,82 +1,66 @@
-import { FlowData, FlowMetrics, VelocityField } from '../types/flow-types';
-import { MetricsCalculator } from './metrics-calculator';
-import { DataProcessor } from './data-processor';
+import { ProcessedFlowData, FlowAnalysisResult, VelocityVector } from '../types/flow-types';
 
 export class FlowAnalyzer {
-private processor: DataProcessor;
-private calculator: MetricsCalculator;
+  analyze(data: ProcessedFlowData): FlowAnalysisResult {
+    const meanVelocity = this.calculateMean(data.magnitudes);
+    const maxVelocity = Math.max(...data.magnitudes);
+    const turbulenceIndex = this.calculateTurbulence(data.magnitudes);
+    const flowPattern = this.classifyFlowPattern(turbulenceIndex);
+    const vorticity = this.calculateVorticity(data.vectors);
+    
+    return {
+      meanVelocity,
+      maxVelocity,
+      turbulenceIndex,
+      flowPattern,
+      vorticity,
+      timestamp: data.timestamp
+    };
+  }
 
-constructor() {
-this.processor = new DataProcessor();
-this.calculator = new MetricsCalculator();
-}
+  private calculateMean(values: number[]): number {
+    return values.reduce((a, b) => a + b, 0) / values.length;
+  }
 
-analyze(data: FlowData): FlowMetrics {
-const processed = this.processor.process(data);
-const velocity = this.calculateVelocity(processed);
-const wss = this.calculator.calculateWSS(velocity);
-const vorticity = this.calculator.calculateVorticity(velocity);
-const flowRate = this.calculator.calculateFlowRate(velocity);
+  private calculateTurbulence(magnitudes: number[]): number {
+    const mean = this.calculateMean(magnitudes);
+    const variance = magnitudes.reduce((sum, v) => sum + (v - mean) ** 2, 0) / magnitudes.length;
+    return Math.sqrt(variance);
+  }
 
-return {
-velocity,
-wss,
-vorticity,
-flowRate,
-timestamp: Date.now()
-};
-}
+  private classifyFlowPattern(turbulence: number): 'laminar' | 'transitional' | 'turbulent' {
+    if (turbulence < 0.3) return 'laminar';
+    if (turbulence < 0.6) return 'transitional';
+    return 'turbulent';
+  }
 
-private calculateVelocity(data: Float32Array): VelocityField {
-const size = Math.cbrt(data.length / 3);
-const vx = new Float32Array(data.length / 3);
-const vy = new Float32Array(data.length / 3);
-const vz = new Float32Array(data.length / 3);
+  private calculateVorticity(vectors: VelocityVector[]): number {
+    if (vectors.length < 2) return 0;
+    
+    let totalVorticity = 0;
+    for (let i = 1; i < vectors.length; i++) {
+      const curl = this.crossProduct(vectors[i - 1], vectors[i]);
+      totalVorticity += Math.sqrt(curl.x ** 2 + curl.y ** 2 + curl.z ** 2);
+    }
+    
+    return totalVorticity / vectors.length;
+  }
 
-for (let i = 0; i < data.length / 3; i++) {
-vx[i] = data[i * 3];
-vy[i] = data[i * 3 + 1];
-vz[i] = data[i * 3 + 2];
-}
+  private crossProduct(a: VelocityVector, b: VelocityVector): VelocityVector {
+    return {
+      x: a.y * b.z - a.z * b.y,
+      y: a.z * b.x - a.x * b.z,
+      z: a.x * b.y - a.y * b.x
+    };
+  }
 
-return { vx, vy, vz, dimensions: [size, size, size] };
-}
-
-computeStreamlines(velocity: VelocityField, seeds: number[][]): number[][][] {
-const streamlines: number[][][] = [];
-for (const seed of seeds) {
-const line = this.traceStreamline(velocity, seed);
-streamlines.push(line);
-}
-return streamlines;
-}
-
-private traceStreamline(velocity: VelocityField, seed: number[]): number[][] {
-const points: number[][] = [seed];
-let current = [...seed];
-const dt = 0.01;
-const maxSteps = 1000;
-
-for (let i = 0; i < maxSteps; i++) {
-const v = this.interpolateVelocity(velocity, current);
-if (Math.hypot(v[0], v[1], v[2]) < 0.001) break;
-current = [current[0] + v[0] * dt, current[1] + v[1] * dt, current[2] + v[2] * dt];
-points.push([...current]);
-}
-
-return points;
-}
-
-private interpolateVelocity(velocity: VelocityField, pos: number[]): number[] {
-const [x, y, z] = pos;
-const [nx, ny, nz] = velocity.dimensions;
-const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
-
-if (ix < 0 || ix >= nx - 1 || iy < 0 || iy >= ny - 1 || iz < 0 || iz >= nz - 1) {
-return [0, 0, 0];
-}
-
-const idx = ix + iy * nx + iz * nx * ny;
-return [velocity.vx[idx], velocity.vy[idx], velocity.vz[idx]];
-}
+  detectAnomalies(data: ProcessedFlowData, threshold: number): number[] {
+    const mean = this.calculateMean(data.magnitudes);
+    const std = this.calculateTurbulence(data.magnitudes);
+    
+    return data.magnitudes
+      .map((v, idx) => ({ v, idx }))
+      .filter(({ v }) => Math.abs(v - mean) > threshold * std)
+      .map(({ idx }) => idx);
+  }
 }

@@ -1,32 +1,47 @@
+export interface VelocityVector {
+  x: number;
+  y: number;
+  z: number;
+}
+
 export interface FlowData {
-raw: Float32Array;
-timestamp: number;
-metadata?: Record<string, any>;
+  vectors: VelocityVector[];
+  dimensions: [number, number, number];
+  timestamp: number;
+  metadata?: Record<string, any>;
 }
 
-export interface VelocityField {
-vx: Float32Array;
-vy: Float32Array;
-vz: Float32Array;
-dimensions: [number, number, number];
+export interface ProcessedFlowData extends FlowData {
+  magnitudes: number[];
 }
 
-export interface WSSData {
-values: Float32Array;
-dimensions: [number, number, number];
-}
-
-export interface VorticityField {
-wx: Float32Array;
-wy: Float32Array;
-wz: Float32Array;
-dimensions: [number, number, number];
+export interface FlowAnalysisResult {
+  meanVelocity: number;
+  maxVelocity: number;
+  turbulenceIndex: number;
+  flowPattern: 'laminar' | 'transitional' | 'turbulent';
+  vorticity: number;
+  timestamp: number;
 }
 
 export interface FlowMetrics {
-velocity: VelocityField;
-wss: WSSData;
-vorticity: VorticityField;
-flowRate: number;
-timestamp: number;
+  peakVelocity: number;
+  meanVelocity: number;
+  flowVolume: number;
+  velocityStd: number;
+  reynoldsNumber: number;
+  wallShearStress: number;
+}
+
+export interface VisualizationConfig {
+  colorScheme: 'velocity' | 'turbulence' | 'vorticity';
+  vectorScale: number;
+  threshold: number;
+  downsampleFactor: number;
+}
+
+export interface AnalysisConfig {
+  velocityThreshold: number;
+  turbulenceThreshold: number;
+  temporalResolution: number;
 }
