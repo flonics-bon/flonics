@@ -1,118 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4D Flow MRI Visualization</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
-            background: #1a1a2e;
-            color: #eee;
-            overflow: hidden;
-        }
-        #container {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        #canvas {
-            flex: 1;
-            display: block;
-        }
-        #controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 20px;
-            border-radius: 10px;
-            min-width: 250px;
-        }
-        .control-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 14px;
-            color: #00d4ff;
-        }
-        input[type="range"] {
-            width: 100%;
-        }
-        button {
-            background: #00d4ff;
-            color: #1a1a2e;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-right: 10px;
-            margin-top: 10px;
-        }
-        button:hover {
-            background: #00a8cc;
-        }
-        #info {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 12px;
-        }
-        .value-display {
-            color: #00d4ff;
-            font-weight: bold;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>4D Flow Visualization</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="container">
-        <canvas id="canvas"></canvas>
-        
-        <div id="controls">
-            <h2 style="margin-top: 0; color: #00d4ff;">4D Flow MRI Controls</h2>
-            
-            <div class="control-group">
-                <label>Time Phase: <span class="value-display" id="timeValue">0</span></label>
-                <input type="range" id="timeSlider" min="0" max="20" value="0" step="1">
-            </div>
-            
-            <div class="control-group">
-                <label>Velocity Threshold: <span class="value-display" id="velocityValue">0.5</span></label>
-                <input type="range" id="velocitySlider" min="0" max="1" value="0.5" step="0.01">
-            </div>
-            
-            <div class="control-group">
-                <label>Particle Density: <span class="value-display" id="densityValue">5000</span></label>
-                <input type="range" id="densitySlider" min="1000" max="10000" value="5000" step="500">
-            </div>
-            
-            <div class="control-group">
-                <label>Flow Speed: <span class="value-display" id="speedValue">1.0</span></label>
-                <input type="range" id="speedSlider" min="0.1" max="3" value="1.0" step="0.1">
-            </div>
-            
-            <div>
-                <button id="playBtn">Play</button>
-                <button id="resetBtn">Reset</button>
-            </div>
-        </div>
-        
-        <div id="info">
-            <div>FPS: <span class="value-display" id="fps">0</span></div>
-            <div>Particles: <span class="value-display" id="particleCount">0</span></div>
-            <div>WebGPU: <span class="value-display" id="webgpuStatus">Checking...</span></div>
-        </div>
-    </div>
-    
-    <script type="module" src="./flowVisualization.js"></script>
+<div class="container">
+<header>
+<h1>4D Flow Visualization</h1>
+<p>실시간 혈류 데이터 시각화</p>
+</header>
+<main>
+<div class="controls">
+<button id="startBtn">시작</button>
+<button id="pauseBtn">일시정지</button>
+<button id="resetBtn">초기화</button>
+<label>속도: <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1"></label>
+<label>입자 수: <input type="range" id="particleSlider" min="100" max="5000" step="100" value="1000"></label>
+</div>
+<canvas id="flowCanvas" width="800" height="600"></canvas>
+<div class="info">
+<div class="stat">
+<span>현재 속도:</span>
+<span id="currentSpeed">0</span>
+</div>
+<div class="stat">
+<span>입자 수:</span>
+<span id="particleCount">1000</span>
+</div>
+<div class="stat">
+<span>FPS:</span>
+<span id="fps">0</span>
+</div>
+</div>
+</main>
+</div>
+<script src="flowVisualization.js"></script>
 </body>
 </html>
