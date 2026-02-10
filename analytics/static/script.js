@@ -1,85 +1,93 @@
-async function analyzeVelocity() {
-    const input = document.getElementById('velocityInput').value;
-    const resultsDiv = document.getElementById('velocityResults');
-    
+let flowData = null;
+let analysisResults = null;
+
+document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+document.getElementById('analyzeBtn').addEventListener('click', analyzeFlow);
+document.getElementById('visualizeBtn').addEventListener('click', visualizeResults);
+
+async function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
     try {
-        const velocity = input.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-        
-        if (velocity.length === 0) {
-            resultsDiv.innerHTML = '<p class="error">유효한 속도 데이터를 입력해주세요.</p>';
-            return;
-        }
-        
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ velocity })
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            resultsDiv.innerHTML = `<p class="error">오류: ${data.error}</p>`;
-            return;
-        }
-        
-        resultsDiv.innerHTML = `
-            <h3>분석 결과</h3>
-            <p><strong>평균 속도:</strong> ${data.mean_velocity.toFixed(2)} cm/s</p>
-            <p><strong>최대 속도:</strong> ${data.max_velocity.toFixed(2)} cm/s</p>
-            <p><strong>최소 속도:</strong> ${data.min_velocity.toFixed(2)} cm/s</p>
-            <p><strong>표준 편차:</strong> ${data.std_velocity.toFixed(2)} cm/s</p>
-        `;
-    } catch (error) {
-        resultsDiv.innerHTML = `<p class="error">오류: ${error.message}</p>`;
+      flowData = JSON.parse(e.target.result);
+      document.getElementById('status').textContent = `Loaded: ${file.name}`;
+      document.getElementById('analyzeBtn').disabled = false;
+    } catch (err) {
+      document.getElementById('status').textContent = 'Error parsing file';
+      console.error(err);
     }
+  };
+  reader.readAsText(file);
 }
 
 async function analyzeFlow() {
-    const vxInput = document.getElementById('vxInput').value;
-    const vyInput = document.getElementById('vyInput').value;
-    const vzInput = document.getElementById('vzInput').value;
-    const resultsDiv = document.getElementById('flowResults');
-    
-    try {
-        const vx = vxInput.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-        const vy = vyInput.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-        const vz = vzInput.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-        
-        if (vx.length === 0 || vy.length === 0 || vz.length === 0) {
-            resultsDiv.innerHTML = '<p class="error">모든 방향의 속도 데이터를 입력해주세요.</p>';
-            return;
-        }
-        
-        if (vx.length !== vy.length || vy.length !== vz.length) {
-            resultsDiv.innerHTML = '<p class="error">모든 방향의 데이터 개수가 같아야 합니다.</p>';
-            return;
-        }
-        
-        const response = await fetch('/api/flow-metrics', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ vx, vy, vz })
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            resultsDiv.innerHTML = `<p class="error">오류: ${data.error}</p>`;
-            return;
-        }
-        
-        resultsDiv.innerHTML = `
-            <h3>유동 분석 결과</h3>
-            <p><strong>평균 유속:</strong> ${data.mean_flow.toFixed(2)} cm/s</p>
-            <p><strong>최대 유속:</strong> ${data.peak_flow.toFixed(2)} cm/s</p>
-            <p><strong>데이터 포인트:</strong> ${data.velocity_magnitude.length}개</p>
-        `;
-    } catch (error) {
-        resultsDiv.innerHTML = `<p class="error">오류: ${error.message}</p>`;
+  if (!flowData) return;
+
+  document.getElementById('status').textContent = 'Analyzing...';
+  document.getElementById('analyzeBtn').disabled = true;
+
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ velocity: flowData.velocity })
+    });
+
+    if (!response.ok) throw new Error('Analysis failed');
+
+    analysisResults = await response.json();
+    displayResults(analysisResults);
+    document.getElementById('visualizeBtn').disabled = false;
+    document.getElementById('status').textContent = 'Analysis complete';
+  } catch (err) {
+    document.getElementById('status').textContent = 'Error during analysis';
+    console.error(err);
+  } finally {
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+}
+
+function displayResults(results) {
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = `
+    <h3>Flow Analysis Results</h3>
+    <p>Mean Velocity: ${results.stats.mean_velocity.toFixed(3)} m/s</p>
+    <p>Max Velocity: ${results.stats.max_velocity.toFixed(3)} m/s</p>
+    <p>Mean Vorticity: ${results.stats.mean_vorticity.toFixed(3)} 1/s</p>
+    <p>Max WSS: ${results.stats.max_wss.toFixed(3)} Pa</p>
+  `;
+}
+
+function visualizeResults() {
+  if (!analysisResults) return;
+
+  const canvas = document.getElementById('visualizationCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 800;
+  canvas.height = 600;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const magnitude = analysisResults.magnitude;
+  if (!magnitude || magnitude.length === 0) return;
+
+  const slice = magnitude[Math.floor(magnitude.length / 2)];
+  const maxVal = analysisResults.stats.max_velocity;
+
+  const cellWidth = canvas.width / slice[0].length;
+  const cellHeight = canvas.height / slice.length;
+
+  for (let i = 0; i < slice.length; i++) {
+    for (let j = 0; j < slice[i].length; j++) {
+      const val = slice[i][j];
+      const intensity = Math.floor((val / maxVal) * 255);
+      ctx.fillStyle = `rgb(${intensity}, 0, ${255 - intensity})`;
+      ctx.fillRect(j * cellWidth, i * cellHeight, cellWidth, cellHeight);
     }
+  }
+
+  document.getElementById('status').textContent = 'Visualization rendered';
 }
