@@ -1,46 +1,7 @@
-// 4D Flow MRI Analysis Module
-// Updated: Enhanced flow velocity calculation
-
-export interface FlowMetrics {
-  velocity: number;
-  direction: [number, number, number];
-  magnitude: number;
-  timestamp: number;
-}
-
-export class FlowAnalyzer {
-  private data: Float32Array;
-  
-  constructor(flowData: Float32Array) {
-    this.data = flowData;
-  }
-  
-  // Calculate peak velocity with improved accuracy
-  calculatePeakVelocity(): number {
-    let maxVel = 0;
-    for (let i = 0; i < this.data.length; i += 3) {
-      const vel = Math.sqrt(
-        this.data[i] ** 2 + 
-        this.data[i + 1] ** 2 + 
-        this.data[i + 2] ** 2
-      );
-      maxVel = Math.max(maxVel, vel);
-    }
-    return maxVel;
-  }
-  
-  // Get flow metrics at specific point
-  getMetricsAtPoint(x: number, y: number, z: number, t: number): FlowMetrics {
-    const idx = (x + y * 100 + z * 10000 + t * 1000000) * 3;
-    return {
-      velocity: Math.sqrt(
-        this.data[idx] ** 2 + 
-        this.data[idx + 1] ** 2 + 
-        this.data[idx + 2] ** 2
-      ),
-      direction: [this.data[idx], this.data[idx + 1], this.data[idx + 2]],
-      magnitude: this.data[idx],
-      timestamp: t
-    };
-  }
-}
+import{DataProcessor}from'./data-processor';
+interface FlowData{velocity:number[];pressure:number[];coordinates:[number,number,number][]}
+interface AnalysisResult{avgVelocity:number;maxVelocity:number;minVelocity:number;avgPressure:number;validPoints:number}
+class FlowAnalysis{private processor:DataProcessor;constructor(){this.processor=new DataProcessor({minValue:-1e6,maxValue:1e6,defaultValue:0})}
+analyze(data:FlowData):AnalysisResult|null{if(!data||!data.velocity||!data.pressure){return null}const validVelocity=this.processor.validateArray(data.velocity).map(v=>this.processor.validateNumber(v));const validPressure=this.processor.validateArray(data.pressure).map(p=>this.processor.validateNumber(p));if(validVelocity.length===0){return{avgVelocity:0,maxVelocity:0,minVelocity:0,avgPressure:0,validPoints:0}}const sum=validVelocity.reduce((acc,v)=>acc+v,0);const avgVelocity=this.processor.safeDivide(sum,validVelocity.length);const maxVelocity=Math.max(...validVelocity);const minVelocity=Math.min(...validVelocity);const pressureSum=validPressure.reduce((acc,p)=>acc+p,0);const avgPressure=this.processor.safeDivide(pressureSum,validPressure.length);return{avgVelocity,maxVelocity,minVelocity,avgPressure,validPoints:validVelocity.length}}
+computeGradient(values:number[],spacing:number):number[]{if(!Array.isArray(values)||values.length<2){return[]}const safeSpacing=this.processor.validateNumber(spacing);if(safeSpacing===0){return new Array(values.length).fill(0)}const gradient:number[]=[];for(let i=0;i<values.length;i++){const prev=this.processor.safeArrayAccess(values,i-1,values[i]);const next=this.processor.safeArrayAccess(values,i+1,values[i]);const diff=this.processor.validateNumber(next-prev);gradient.push(this.processor.safeDivide(diff,2*safeSpacing))}return gradient}}
+export{FlowAnalysis,FlowData,AnalysisResult}

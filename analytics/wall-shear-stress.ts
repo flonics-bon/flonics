@@ -1,30 +1,8 @@
-export class WallShearStress {
-  private viscosity: number = 0.004; // Pa·s for blood
-
-  calculate(velocity: Float32Array, distance: number): number {
-    if (distance === 0) return 0;
-    
-    const velocityGradient = velocity[0] / distance;
-    return this.viscosity * velocityGradient;
-  }
-
-  calculateWSS(velocityField: Float32Array, wallNormals: Float32Array): Float32Array {
-    const wssValues = new Float32Array(wallNormals.length / 3);
-    
-    for (let i = 0; i < wssValues.length; i++) {
-      const idx = i * 3;
-      const vx = velocityField[idx];
-      const vy = velocityField[idx + 1];
-      const vz = velocityField[idx + 2];
-      
-      const nx = wallNormals[idx];
-      const ny = wallNormals[idx + 1];
-      const nz = wallNormals[idx + 2];
-      
-      const tangentialVelocity = Math.sqrt(vx * vx + vy * vy + vz * vz);
-      wssValues[i] = this.viscosity * tangentialVelocity / 0.001;
-    }
-    
-    return wssValues;
-  }
-}
+import{DataProcessor}from'./data-processor';
+interface WallPoint{position:[number,number,number];normal:[number,number,number];velocity:[number,number,number]}
+interface WSSResult{magnitude:number;vector:[number,number,number]}
+class WallShearStress{private processor:DataProcessor;private viscosity:number;constructor(viscosity:number=0.0035){this.processor=new DataProcessor({minValue:-1e8,maxValue:1e8,defaultValue:0});this.viscosity=this.processor.validateNumber(viscosity)}
+computeWSS(point:WallPoint):WSSResult|null{if(!point||!point.position||!point.normal||!point.velocity){return null}const n=point.normal.map(v=>this.processor.validateNumber(v));const v=point.velocity.map(v=>this.processor.validateNumber(v));const nMag=Math.sqrt(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]);if(nMag===0){return{magnitude:0,vector:[0,0,0]}}const nNorm=n.map(ni=>this.processor.safeDivide(ni,nMag));const vDotN=v[0]*nNorm[0]+v[1]*nNorm[1]+v[2]*nNorm[2];const vTangent=[v[0]-vDotN*nNorm[0],v[1]-vDotN*nNorm[1],v[2]-vDotN*nNorm[2]];const vTangentMag=Math.sqrt(vTangent[0]*vTangent[0]+vTangent[1]*vTangent[1]+vTangent[2]*vTangent[2]);const wssVector=vTangent.map(vt=>this.processor.validateNumber(this.viscosity*vt));const wssMagnitude=this.processor.validateNumber(this.viscosity*vTangentMag);return{magnitude:wssMagnitude,vector:wssVector as[number,number,number]}}
+computeOscillatoryShearIndex(wssTimeSeries:WSSResult[]):number{if(!Array.isArray(wssTimeSeries)||wssTimeSeries.length===0){return 0}let sumMagnitude=0;const sumVector=[0,0,0];for(const wss of wssTimeSeries){if(!wss||!wss.vector){continue}sumMagnitude+=this.processor.validateNumber(wss.magnitude);sumVector[0]+=this.processor.validateNumber(wss.vector[0]);sumVector[1]+=this.processor.validateNumber(wss.vector[1]);sumVector[2]+=this.processor.validateNumber(wss.vector[2])}const sumVectorMag=Math.sqrt(sumVector[0]*sumVector[0]+sumVector[1]*sumVector[1]+sumVector[2]*sumVector[2]);if(sumMagnitude===0){return 0}const osi=0.5*(1-this.processor.safeDivide(sumVectorMag,sumMagnitude));return this.processor.validateNumber(Math.max(0,Math.min(1,osi)))}
+computeTimeAveragedWSS(wssTimeSeries:WSSResult[]):WSSResult|null{if(!Array.isArray(wssTimeSeries)||wssTimeSeries.length===0){return null}const avgVector=[0,0,0];let avgMagnitude=0;for(const wss of wssTimeSeries){if(!wss||!wss.vector){continue}avgVector[0]+=this.processor.validateNumber(wss.vector[0]);avgVector[1]+=this.processor.validateNumber(wss.vector[1]);avgVector[2]+=this.processor.validateNumber(wss.vector[2]);avgMagnitude+=this.processor.validateNumber(wss.magnitude)}const n=wssTimeSeries.length;return{magnitude:this.processor.safeDivide(avgMagnitude,n),vector:[this.processor.safeDivide(avgVector[0],n),this.processor.safeDivide(avgVector[1],n),this.processor.safeDivide(avgVector[2],n)]}}}
+export{WallShearStress,WallPoint,WSSResult}

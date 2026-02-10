@@ -1,30 +1,8 @@
-import { FlowData, MetricsResult } from './types';
-
-export class FlowAnalyzer {
-  private device: GPUDevice;
-
-  constructor(device: GPUDevice) {
-    this.device = device;
-  }
-
-  async analyze(data: FlowData): Promise<MetricsResult> {
-    const peakVelocity = this.calculatePeakVelocity(data.velocity);
-    const meanVelocity = this.calculateMeanVelocity(data.velocity);
-    
-    return {
-      peakVelocity,
-      meanVelocity,
-      flowRate: meanVelocity * 100,
-      wss: 0
-    };
-  }
-
-  private calculatePeakVelocity(velocity: Float32Array): number {
-    return Math.max(...velocity);
-  }
-
-  private calculateMeanVelocity(velocity: Float32Array): number {
-    const sum = velocity.reduce((a, b) => a + b, 0);
-    return sum / velocity.length;
-  }
-}
+import{DataProcessor}from'./data-processor';
+interface VectorField{x:number[];y:number[];z:number[]}
+interface StreamlineConfig{maxSteps?:number;stepSize?:number;threshold?:number}
+class FlowAnalyzer{private processor:DataProcessor;constructor(){this.processor=new DataProcessor({minValue:-1e8,maxValue:1e8,defaultValue:0})}
+computeDivergence(field:VectorField,dx:number,dy:number,dz:number):number[]{if(!field||!field.x||!field.y||!field.z){return[]}const len=Math.min(field.x.length,field.y.length,field.z.length);if(len===0){return[]}const safeDx=this.processor.validateNumber(dx)||1;const safeDy=this.processor.validateNumber(dy)||1;const safeDz=this.processor.validateNumber(dz)||1;const divergence:number[]=[];for(let i=0;i<len;i++){const dFx=this.processor.safeArrayAccess(field.x,i+1,field.x[i])-this.processor.safeArrayAccess(field.x,i-1,field.x[i]);const dFy=this.processor.safeArrayAccess(field.y,i+1,field.y[i])-this.processor.safeArrayAccess(field.y,i-1,field.y[i]);const dFz=this.processor.safeArrayAccess(field.z,i+1,field.z[i])-this.processor.safeArrayAccess(field.z,i-1,field.z[i]);const div=this.processor.safeDivide(dFx,2*safeDx)+this.processor.safeDivide(dFy,2*safeDy)+this.processor.safeDivide(dFz,2*safeDz);divergence.push(this.processor.validateNumber(div))}return divergence}
+computeVorticity(field:VectorField,dx:number,dy:number,dz:number):VectorField{const empty={x:[],y:[],z:[]};if(!field||!field.x||!field.y||!field.z){return empty}const len=Math.min(field.x.length,field.y.length,field.z.length);if(len===0){return empty}const safeDx=this.processor.validateNumber(dx)||1;const safeDy=this.processor.validateNumber(dy)||1;const safeDz=this.processor.validateNumber(dz)||1;const vorticity:VectorField={x:[],y:[],z:[]};for(let i=0;i<len;i++){const dWy_dz=this.processor.safeDivide(this.processor.safeArrayAccess(field.y,i+1,field.y[i])-this.processor.safeArrayAccess(field.y,i-1,field.y[i]),2*safeDz);const dWz_dy=this.processor.safeDivide(this.processor.safeArrayAccess(field.z,i+1,field.z[i])-this.processor.safeArrayAccess(field.z,i-1,field.z[i]),2*safeDy);vorticity.x.push(this.processor.validateNumber(dWy_dz-dWz_dy));const dWz_dx=this.processor.safeDivide(this.processor.safeArrayAccess(field.z,i+1,field.z[i])-this.processor.safeArrayAccess(field.z,i-1,field.z[i]),2*safeDx);const dWx_dz=this.processor.safeDivide(this.processor.safeArrayAccess(field.x,i+1,field.x[i])-this.processor.safeArrayAccess(field.x,i-1,field.x[i]),2*safeDz);vorticity.y.push(this.processor.validateNumber(dWz_dx-dWx_dz));const dWx_dy=this.processor.safeDivide(this.processor.safeArrayAccess(field.x,i+1,field.x[i])-this.processor.safeArrayAccess(field.x,i-1,field.x[i]),2*safeDy);const dWy_dx=this.processor.safeDivide(this.processor.safeArrayAccess(field.y,i+1,field.y[i])-this.processor.safeArrayAccess(field.y,i-1,field.y[i]),2*safeDx);vorticity.z.push(this.processor.validateNumber(dWx_dy-dWy_dx))}return vorticity}
+generateStreamline(field:VectorField,start:[number,number,number],config:StreamlineConfig={}):{points:[number,number,number][]}|null{if(!field||!field.x||!field.y||!field.z||!start){return null}const maxSteps=config.maxSteps??1000;const stepSize=this.processor.validateNumber(config.stepSize??0.1);const threshold=this.processor.validateNumber(config.threshold??1e-6);if(stepSize===0){return{points:[start]}}const points:[number,number,number][]=[[...start]];let[x,y,z]=start;for(let step=0;step<maxSteps;step++){const idx=Math.floor(x)%field.x.length;const vx=this.processor.safeArrayAccess(field.x,idx,0);const vy=this.processor.safeArrayAccess(field.y,idx,0);const vz=this.processor.safeArrayAccess(field.z,idx,0);const mag=Math.sqrt(vx*vx+vy*vy+vz*vz);if(mag<threshold){break}x+=this.processor.safeDivide(vx,mag)*stepSize;y+=this.processor.safeDivide(vy,mag)*stepSize;z+=this.processor.safeDivide(vz,mag)*stepSize;points.push([this.processor.validateNumber(x),this.processor.validateNumber(y),this.processor.validateNumber(z)])}return{points}}}
+export{FlowAnalyzer,VectorField,StreamlineConfig}

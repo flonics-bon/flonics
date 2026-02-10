@@ -1,32 +1,8 @@
-import { FlowData, MetricsResult } from './types';
-
-export class FlowMetrics {
-  calculateVolumetricFlow(velocity: Float32Array, area: number): number {
-    const meanVelocity = velocity.reduce((a, b) => a + b, 0) / velocity.length;
-    return meanVelocity * area;
-  }
-
-  calculateReynoldsNumber(velocity: number, diameter: number, density: number = 1060, viscosity: number = 0.004): number {
-    return (density * velocity * diameter) / viscosity;
-  }
-
-  calculatePulsatilityIndex(peakVelocity: number, minVelocity: number, meanVelocity: number): number {
-    if (meanVelocity === 0) return 0;
-    return (peakVelocity - minVelocity) / meanVelocity;
-  }
-
-  calculateResistanceIndex(peakVelocity: number, minVelocity: number): number {
-    if (peakVelocity === 0) return 0;
-    return (peakVelocity - minVelocity) / peakVelocity;
-  }
-
-  getStatistics(data: Float32Array): { mean: number; std: number; min: number; max: number } {
-    const mean = data.reduce((a, b) => a + b, 0) / data.length;
-    const variance = data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / data.length;
-    const std = Math.sqrt(variance);
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    
-    return { mean, std, min, max };
-  }
-}
+import{DataProcessor}from'./data-processor';
+interface MetricData{values:number[];timestamps?:number[]}
+interface MetricResult{mean:number;std:number;min:number;max:number;median:number}
+class FlowMetrics{private processor:DataProcessor;constructor(){this.processor=new DataProcessor({minValue:-1e10,maxValue:1e10,defaultValue:0})}
+computeStatistics(data:MetricData):MetricResult|null{if(!data||!data.values||data.values.length===0){return null}const validValues=this.processor.validateArray(data.values).map(v=>this.processor.validateNumber(v));if(validValues.length===0){return{mean:0,std:0,min:0,max:0,median:0}}const sum=validValues.reduce((acc,v)=>acc+v,0);const mean=this.processor.safeDivide(sum,validValues.length);const variance=validValues.reduce((acc,v)=>acc+Math.pow(v-mean,2),0);const std=Math.sqrt(this.processor.safeDivide(variance,validValues.length));const sorted=[...validValues].sort((a,b)=>a-b);const mid=Math.floor(sorted.length/2);const median=sorted.length%2===0?this.processor.safeDivide(sorted[mid-1]+sorted[mid],2):sorted[mid];return{mean:this.processor.validateNumber(mean),std:this.processor.validateNumber(std),min:this.processor.validateNumber(Math.min(...validValues)),max:this.processor.validateNumber(Math.max(...validValues)),median:this.processor.validateNumber(median)}}
+computeTemporalDerivative(data:MetricData):number[]{if(!data||!data.values||!data.timestamps){return[]}if(data.values.length!==data.timestamps.length||data.values.length<2){return[]}const derivative:number[]=[];for(let i=1;i<data.values.length;i++){const dv=this.processor.validateNumber(data.values[i])-this.processor.validateNumber(data.values[i-1]);const dt=this.processor.validateNumber(data.timestamps[i])-this.processor.validateNumber(data.timestamps[i-1]);derivative.push(this.processor.safeDivide(dv,dt))}return derivative}
+computeIntegral(data:MetricData):number{if(!data||!data.values||!data.timestamps){return 0}if(data.values.length!==data.timestamps.length||data.values.length<2){return 0}let integral=0;for(let i=1;i<data.values.length;i++){const v1=this.processor.validateNumber(data.values[i-1]);const v2=this.processor.validateNumber(data.values[i]);const dt=this.processor.validateNumber(data.timestamps[i])-this.processor.validateNumber(data.timestamps[i-1]);integral+=this.processor.safeDivide((v1+v2)*dt,2)}return this.processor.validateNumber(integral)}}
+export{FlowMetrics,MetricData,MetricResult}
